@@ -1,0 +1,51 @@
+name: Construire l'APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Preparer les dossiers
+        run: |
+          mkdir -p www assets
+          cp index.html www/index.html
+          cp icon-only.png icon-foreground.png icon-background.png assets/
+
+      - name: Installer les dependances
+        run: npm install
+
+      - name: Creer le projet Android
+        run: npx cap add android
+
+      - name: Generer les icones
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#ffffff'
+
+      - name: Synchroniser l'application
+        run: npx cap sync android
+
+      - name: Compiler l'APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Publier l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LcyDaniel-Garage-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
